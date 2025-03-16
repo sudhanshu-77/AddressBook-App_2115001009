@@ -1,84 +1,85 @@
+using AutoMapper;
 using Microsoft.AspNetCore.Mvc;
 using ModelLayer;
 using ModelLayer.DTO;
-using RepositoryLayer.Context;
-using RepositoryLayer.Entity;
 using System.Collections.Generic;
 using System.Linq;
 
 namespace AddressBookApp.Controllers
 {
     [ApiController]
-    [Route("[controller]")]
+    [Route("api/[controller]")]
     public class AddressBookController : ControllerBase
     {
         private static List<AddressModel> _contacts = new List<AddressModel>();
+        private readonly IMapper _mapper;
 
-        // GET: api/addressbook
-        [HttpGet]
-        public ActionResult<ResponseModel<IEnumerable<AddressModel>>> GetAllContacts()
+        public AddressBookController(IMapper mapper)
         {
-            return Ok(new ResponseModel<IEnumerable<AddressModel>>
+            _mapper = mapper;
+        }
+
+        // ? Get All Contacts (Returns DTO)
+        [HttpGet]
+        public ActionResult<ResponseModel<IEnumerable<AddressBookDTO>>> GetAllContacts()
+        {
+            var dtoContacts = _mapper.Map<IEnumerable<AddressBookDTO>>(_contacts);
+            return Ok(new ResponseModel<IEnumerable<AddressBookDTO>>
             {
                 Success = true,
                 Message = "Contacts retrieved successfully.",
-                Data = _contacts
+                Data = dtoContacts
             });
         }
 
-        // GET: api/addressbook/{id}
+        // ? Get Contact by ID (Returns DTO)
         [HttpGet("{id}")]
-        public ActionResult<ResponseModel<AddressModel>> GetContactById(int id)
+        public ActionResult<ResponseModel<AddressBookDTO>> GetContactById(int id)
         {
             var contact = _contacts.FirstOrDefault(c => c.Id == id);
             if (contact == null)
             {
-                return NotFound(new ResponseModel<AddressModel>
+                return NotFound(new ResponseModel<AddressBookDTO>
                 {
                     Success = false,
                     Message = "Contact not found."
                 });
             }
-            return Ok(new ResponseModel<AddressModel>
+
+            var dtoContact = _mapper.Map<AddressBookDTO>(contact);
+            return Ok(new ResponseModel<AddressBookDTO>
             {
                 Success = true,
                 Message = "Contact retrieved successfully.",
-                Data = contact
+                Data = dtoContact
             });
         }
 
-        // POST: api/addressbook
+        // ? Add Contact (Accepts DTO)
         [HttpPost]
-        public ActionResult<ResponseModel<AddressModel>> AddContact([FromBody] AddressModel contact)
+        public ActionResult<ResponseModel<AddressBookDTO>> AddContact([FromBody] AddressBookDTO contactDto)
         {
-            if (contact == null)
-            {
-                return BadRequest(new ResponseModel<AddressModel>
-                {
-                    Success = false,
-                    Message = "Invalid contact data."
-                });
-            }
-
+            var contact = _mapper.Map<AddressModel>(contactDto);
             contact.Id = _contacts.Count + 1; // Simulating auto-increment ID
             _contacts.Add(contact);
 
-            return CreatedAtAction(nameof(GetContactById), new { id = contact.Id },
-                new ResponseModel<AddressModel>
+            var createdDto = _mapper.Map<AddressBookDTO>(contact);
+            return CreatedAtAction(nameof(GetContactById), new { id = createdDto.Id },
+                new ResponseModel<AddressBookDTO>
                 {
                     Success = true,
                     Message = "Contact added successfully.",
-                    Data = contact
+                    Data = createdDto
                 });
         }
 
-        // PUT: api/addressbook/{id}
+        // ? Update Contact (Accepts DTO)
         [HttpPut("{id}")]
-        public ActionResult<ResponseModel<AddressModel>> UpdateContact(int id, [FromBody] AddressModel updatedContact)
+        public ActionResult<ResponseModel<AddressBookDTO>> UpdateContact(int id, [FromBody] AddressBookDTO contactDto)
         {
-            if (updatedContact == null || id != updatedContact.Id)
+            if (id != contactDto.Id)
             {
-                return BadRequest(new ResponseModel<AddressModel>
+                return BadRequest(new ResponseModel<AddressBookDTO>
                 {
                     Success = false,
                     Message = "Invalid request data."
@@ -88,27 +89,26 @@ namespace AddressBookApp.Controllers
             var existingContact = _contacts.FirstOrDefault(c => c.Id == id);
             if (existingContact == null)
             {
-                return NotFound(new ResponseModel<AddressModel>
+                return NotFound(new ResponseModel<AddressBookDTO>
                 {
                     Success = false,
                     Message = "Contact not found."
                 });
             }
 
-            existingContact.Name = updatedContact.Name;
-            existingContact.Email = updatedContact.Email;
-            existingContact.PhoneNumber = updatedContact.PhoneNumber;
-            existingContact.Address = updatedContact.Address;
+            // Update fields
+            _mapper.Map(contactDto, existingContact);
 
-            return Ok(new ResponseModel<AddressModel>
+            var updatedDto = _mapper.Map<AddressBookDTO>(existingContact);
+            return Ok(new ResponseModel<AddressBookDTO>
             {
                 Success = true,
                 Message = "Contact updated successfully.",
-                Data = existingContact
+                Data = updatedDto
             });
         }
 
-        // DELETE: api/addressbook/{id}
+        // ? Delete Contact
         [HttpDelete("{id}")]
         public ActionResult<ResponseModel<string>> DeleteContact(int id)
         {

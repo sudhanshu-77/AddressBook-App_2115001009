@@ -1,6 +1,12 @@
+using BusinessLayer.Mapping;
+using AutoMapper;
 using Microsoft.EntityFrameworkCore;
 using RepositoryLayer.Context;
 using System;
+using FluentValidation;
+using FluentValidation.AspNetCore;
+using BusinessLayer.Validations;
+using ModelLayer.DTO;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -10,6 +16,14 @@ builder.Services.AddDbContext<AppDbContext>(options => options.UseSqlServer(conn
 
 // Add services to the container.
 builder.Services.AddControllers();
+
+builder.Services.AddFluentValidationAutoValidation();
+builder.Services.AddFluentValidationClientsideAdapters();
+
+// Register Validators Manually
+builder.Services.AddValidatorsFromAssemblyContaining<AddressBookValidator>();
+// Add AutoMapper
+builder.Services.AddAutoMapper(typeof(AddressBookMappingProfile));
 
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
